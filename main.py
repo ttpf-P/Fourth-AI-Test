@@ -2,6 +2,9 @@ import neurons
 import random
 import copy
 
+# multiprocessing stuff
+import multiprocessing
+
 
 class NeuralNetwork:
     def __init__(self, structure, lr=0.05):
@@ -9,7 +12,7 @@ class NeuralNetwork:
         self.lr = lr
 
     @staticmethod
-    def generate(structure):
+    def generate(structure) -> list:
         """network = [[neurons.InputNeuron()], [neurons.Neuron()]]
         network[0][0].value = 1
         network[1][0].predecessors = [[network[0][0], 1]]"""
@@ -47,11 +50,17 @@ class NetworkBatch:
         self.lr = lr
         self.gen_size = gen_size
 
-    def train(self, score_func, generations, survivor_cut=2):
+    def train(self, score_func, generations, survivor_cut=2, parallel=False):
         for gen in range(generations):
             scores = []
-            for network in self.networks:
-                scores.append((score_func(network), network))
+            if parallel:
+                pool = multiprocessing.Pool(multiprocessing.cpu_count())
+                scores = pool.map(score_func, self.networks)
+                pool.close()
+            else:
+                for network in self.networks:
+                    scores.append(score_func(network))
+
             scores.sort()
             networks_new = []
             scores_cut = scores[:int(self.gen_size/survivor_cut)]
@@ -71,6 +80,7 @@ class NetworkBatch:
 
 if __name__ == "__main__":
     import time
+    import score_func_import
     """NN = NeuralNetwork(())
     NN.run()
     print(NN.network[1][0].value)
@@ -82,16 +92,6 @@ if __name__ == "__main__":
         network.network[0][0].value = 1
         network.run()
         return abs(network.network[-1][0].value)"""
-
-
-    def score_func(network: NeuralNetwork):
-        x = (random.random()*4)+1
-        y = (random.random()*4)+1
-        network.network[0][0].value = x
-        network.network[0][1].value = y
-        network.run()
-        return abs(network.network[-1][0].value - (x+y))
-
 
     """def score_func(network: NeuralNetwork):
         score = 0
@@ -109,6 +109,6 @@ if __name__ == "__main__":
     print(NB.networks[0].network)
     print(NB.networks[1].network)
     start = time.time_ns()
-    NB.train(score_func, 20)
+    NB.train(score_func_import.score_func, 20)
     print("training:", (time.time_ns()-start)/10**9, "s")
     print("creating:", (start-startbatch)/10**9, "s")

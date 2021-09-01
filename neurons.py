@@ -1,5 +1,6 @@
 import random
 
+
 class Neuron:
     def __init__(self):
         self.predecessors = []   # [[predecessor neuron, weight]]
@@ -18,7 +19,6 @@ class Neuron:
     def mutate(self, lr, score):
         for synapse in range(len(self.predecessors)):
             rand = random.uniform(-lr * score, lr * score)
-            #print(rand)
             self.predecessors[synapse][1] += rand
             del rand
         del synapse
