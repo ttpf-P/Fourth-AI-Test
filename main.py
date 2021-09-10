@@ -14,7 +14,7 @@ class NeuralNetwork:
         self.lr = lr
 
     @staticmethod
-    @functools.lru_cache
+    @functools.lru_cache()
     def generate(structure) -> list:
         """network = [[neurons.InputNeuron()], [neurons.Neuron()]]
         network[0][0].value = 1
@@ -64,7 +64,7 @@ class NetworkBatch:
                 for network in self.networks:
                     scores.append(score_func(network))
 
-            scores.sort(reverse=True)
+            scores.sort(reverse=False)
             networks_new = []
             scores_cut = scores[:int(self.gen_size/survivor_cut)]
             start_ = time.time_ns()
@@ -73,7 +73,7 @@ class NetworkBatch:
                 networks_new.append(copy.deepcopy(chosen[1]))
                 networks_new[i].mutate(chosen[0])"""
             if parallel:
-                randoms = [random.choice(scores_cut)[1] for _ in range(self.gen_size)]
+                randoms = [random.choice(scores_cut) for _ in range(self.gen_size)]
                 """networks_new = pool.map(lambda x: copy.deepcopy(random.choice(x)),
                                         [scores_cut for _ in range(self.gen_size)])"""
                 networks_new = pool.map(copy.deepcopy, randoms)
@@ -82,14 +82,15 @@ class NetworkBatch:
                 for i in range(self.gen_size):
                     chosen = random.choice(scores_cut)
                     networks_new.append(NeuralNetwork((), lr=self.lr))
-                    networks_new[i].network = copy.deepcopy(chosen[1].network)
-            print((time.time_ns() - start_) / 10 ** 9)
+                    networks_new[-1].network = copy.deepcopy(chosen[1].network)
+                    networks_new[-1] = (chosen[0], networks_new[-1])
+            # print((time.time_ns() - start_) / 10 ** 9)
             for i in range(self.gen_size):
-                networks_new[i].mutate(scores_cut[0][0])
-            print((time.time_ns() - start_) / 10 ** 9)
+                networks_new[i][1].mutate(networks_new[i][0])
+            # print((time.time_ns() - start_) / 10 ** 9)
             del self.networks
-            self.networks = networks_new
-            if gen % 1 == 0:
+            self.networks = [network[1] for network in networks_new]
+            if gen % 50 == 0:
                 print(gen, ":", scores[0][0], "@", scores[0][1].network[-1][0].predecessors[0][1], "  \t",
                       scores[-1][0], "@", scores[-1][1].network[-1][0].predecessors[0][1])
             del networks_new
@@ -123,10 +124,10 @@ if __name__ == "__main__":
         return score/5"""
 
     startbatch = time.time_ns()
-    NB = NetworkBatch(((4, neurons.InputNeuron), (2, neurons.Neuron), (1, neurons.Neuron)), 0.1, 200000)
+    NB = NetworkBatch(((2, neurons.InputNeuron), (1, neurons.Neuron)), 0.1, 2000)
     print(NB.networks[0].network)
     print(NB.networks[1].network)
     start = time.time_ns()
-    NB.train(score_func_import.score_func3, 1, parallel=True)
+    NB.train(score_func_import.score_func, 2000, parallel=False)
     print("training:", (time.time_ns()-start)/10**9, "s")
     print("creating:", (start-startbatch)/10**9, "s")
