@@ -1,4 +1,6 @@
+import functools
 import random
+import math
 
 
 class Neuron:
@@ -11,7 +13,7 @@ class Neuron:
         length = len(self.predecessors)
         for synapse in range(length):
             value_new += self.predecessors[synapse][0].value*self.predecessors[synapse][1]
-        self.value = value_new / length
+        self.value = 1 / (1 + math.exp(value_new / length))
         del value_new
         del length
         del synapse
